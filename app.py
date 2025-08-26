@@ -30,6 +30,86 @@ ALLOWED_EXTENSIONS = {'csv', 'pdf', 'txt'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
+# Try to import PDF processing
+try:
+    import PyPDF2
+
+    PDF_AVAILABLE = True
+    print("✅ PDF processing available")
+except ImportError:
+    PDF_AVAILABLE = False
+    print("⚠️ PDF processing not available - install PyPDF2")
+
+
+# PDF processing functions
+def extract_text_from_pdf(pdf_path: str) -> str:
+    """Extract text from PDF file"""
+    if not PDF_AVAILABLE:
+        raise ImportError("PyPDF2 not available")
+
+    try:
+        with open(pdf_path, 'rb') as file:
+            reader = PyPDF2.PdfReader(file)
+            text = []
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text.append(page_text)
+        return "\n".join(text)
+    except Exception as e:
+        raise Exception(f"PDF extraction failed: {str(e)}")
+
+
+def clean_and_split_pdf_text(text: str) -> List[str]:
+    """Turn raw PDF text into learning objectives"""
+    import re
+
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text)
+
+    # Common patterns for learning objectives
+    patterns = [
+        r'(?:Learning\s+Objective|Objective|LO)[s]?[:\-\s]*([^\.]{20,200})',
+        r'(?:Students?\s+will|By\s+the\s+end|Upon\s+completion)[^\.]{20,200}',
+        r'(?:Understand|Describe|Explain|Identify|Analyze|Compare|Define)[^\.]{15,150}',
+        r'(?:\d+\.|\*|\-|\•)\s*([^\.]{15,200})',
+    ]
+
+    objectives = []
+
+    # Try pattern matching first
+    for pattern in patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            cleaned = match.strip()
+            if 10 < len(cleaned) < 300 and cleaned not in objectives:
+                objectives.append(cleaned)
+
+    # If no pattern matches, try splitting on common delimiters
+    if len(objectives) < 3:
+        candidates = re.split(r'(?:\n|\d+\.|•|\*|\-)\s*', text)
+        for candidate in candidates:
+            cleaned = candidate.strip()
+            # Filter for reasonable length sentences that look like learning objectives
+            if (20 < len(cleaned) < 250 and
+                    any(word in cleaned.lower() for word in
+                        ['understand', 'describe', 'explain', 'identify', 'analyze', 'compare', 'define', 'discuss',
+                         'evaluate', 'demonstrate']) and
+                    cleaned not in objectives):
+                objectives.append(cleaned)
+
+    # Final cleanup and limit
+    final_objectives = []
+    for obj in objectives[:20]:  # Limit to 20 objectives
+        # Remove common prefixes and clean up
+        obj = re.sub(r'^(?:Learning\s+Objective[s]?[:\-\s]*|LO[:\-\s]*|\d+\.\s*)', '', obj, flags=re.IGNORECASE)
+        obj = obj.strip()
+        if obj and len(obj) > 10:
+            final_objectives.append(obj)
+
+    return final_objectives if final_objectives else ['No clear learning objectives found in PDF']
+
+
 # Create directories
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(SESSION_FOLDER, exist_ok=True)
@@ -124,6 +204,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                     <select id="inputMethod" onchange="toggleInputMethod()">
                         <option value="text">Manual Text Input</option>
                         <option value="csv">CSV File with Learning Objectives</option>
+                        <option value="pdf">PDF Lecture (Auto-extract objectives)</option>
                     </select>
                 </div>
                 <div id="textInput" class="form-group">
@@ -143,6 +224,15 @@ Identify clinical signs of diabetic ketoacidosis"></textarea>
                     </div>
                     <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="handleFileSelect(event, 'csv')">
                     <div id="csvFileInfo" class="file-info"></div>
+                </div>
+                <div id="pdfInput" class="form-group hidden">
+                    <label>Upload PDF Lecture:</label>
+                    <div class="file-drop-zone" onclick="document.getElementById('pdfFile').click()">
+                        <div>📚 Drop your lecture PDF here or click to browse</div>
+                        <div class="file-info">We'll automatically extract learning objectives from the content</div>
+                    </div>
+                    <input type="file" id="pdfFile" accept=".pdf" style="display: none;" onchange="handleFileSelect(event, 'pdf')">
+                    <div id="pdfFileInfo" class="file-info"></div>
                 </div>
                 <div id="losPreview" class="los-preview hidden">
                     <h4>📋 Extracted Learning Objectives:</h4>
@@ -199,6 +289,7 @@ Identify clinical signs of diabetic ketoacidosis"></textarea>
         function toggleInputMethod() {
             const method = document.getElementById('inputMethod').value;
             document.getElementById('csvInput').classList.toggle('hidden', method !== 'csv');
+            document.getElementById('pdfInput').classList.toggle('hidden', method !== 'pdf');
             document.getElementById('textInput').classList.toggle('hidden', method !== 'text');
         }
 
@@ -255,7 +346,7 @@ Identify clinical signs of diabetic ketoacidosis"></textarea>
                         throw new Error('Please enter some learning objectives');
                     }
                     requestData.text = textInput;
-                } else if (method === 'csv') {
+                } else if (method === 'csv' || method === 'pdf') {
                     if (!sessionId) {
                         throw new Error('Please upload a file first');
                     }
@@ -357,7 +448,7 @@ def upload_file():
             return jsonify({'error': 'No file selected'}), 400
 
         if not allowed_file(file.filename):
-            return jsonify({'error': 'File type not allowed. Use CSV files only.'}), 400
+            return jsonify({'error': 'File type not allowed. Use CSV or PDF files only.'}), 400
 
         # Generate unique session ID
         session_id = str(uuid.uuid4())
@@ -444,8 +535,21 @@ def extract_learning_objectives():
                     logger.error(f"CSV processing error: {csv_error}")
                     return jsonify({'error': f'CSV processing failed: {str(csv_error)}'}), 500
 
+            elif file_type == 'pdf':
+                if not PDF_AVAILABLE:
+                    return jsonify({'error': 'PDF processing not available in this deployment'}), 500
+
+                try:
+                    text = extract_text_from_pdf(file_path)
+                    los = clean_and_split_pdf_text(text)
+                    logger.info(f"Extracted {len(los)} objectives from PDF")
+
+                except Exception as pdf_error:
+                    logger.error(f"PDF processing error: {pdf_error}")
+                    return jsonify({'error': f'PDF processing failed: {str(pdf_error)}'}), 500
+
             else:
-                return jsonify({'error': 'Only CSV files are supported in demo version'}), 400
+                return jsonify({'error': f'Unsupported file type: {file_type}'}), 400
 
         elif 'text' in data:
             # Process manual text input
