@@ -29,8 +29,15 @@ ALLOWED_EXTENSIONS = {'csv', 'pdf', 'txt'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
-# Global state for processing sessions
+# Global state for processing sessions (using in-memory storage)
 processing_sessions: Dict[str, Dict] = {}
+
+
+# Debug function
+def debug_sessions():
+    print(f"Current sessions: {list(processing_sessions.keys())}")
+    return processing_sessions
+
 
 # Create upload directory
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -412,7 +419,7 @@ Identify clinical signs of diabetic ketoacidosis"></textarea>
             if (!file) return;
 
             const infoElement = document.getElementById(type + 'FileInfo');
-            infoElement.innerHTML = `✅ Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            infoElement.innerHTML = `🔄 Uploading: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
 
             // Upload file to server
             const formData = new FormData();
@@ -425,14 +432,17 @@ Identify clinical signs of diabetic ketoacidosis"></textarea>
                 });
 
                 const data = await response.json();
+                console.log('Upload response:', data); // Debug log
 
                 if (response.ok) {
                     sessionId = data.session_id;
-                    infoElement.innerHTML += ` - Uploaded successfully`;
+                    infoElement.innerHTML = `✅ Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) - Uploaded successfully`;
+                    console.log('Session ID stored:', sessionId); // Debug log
                 } else {
-                    throw new Error(data.error);
+                    throw new Error(data.error || 'Upload failed');
                 }
             } catch (error) {
+                console.error('Upload error:', error);
                 infoElement.innerHTML = `❌ Upload failed: ${error.message}`;
             }
         }
@@ -464,7 +474,10 @@ Identify clinical signs of diabetic ketoacidosis"></textarea>
                         throw new Error('Please upload a file first');
                     }
                     requestData.session_id = sessionId;
+                    console.log('Sending session ID:', sessionId); // Debug log
                 }
+
+                console.log('Extract request:', requestData); // Debug log
 
                 const response = await fetch('/api/process/extract-los', {
                     method: 'POST',
@@ -473,6 +486,7 @@ Identify clinical signs of diabetic ketoacidosis"></textarea>
                 });
 
                 const data = await response.json();
+                console.log('Extract response:', data); // Debug log
 
                 if (response.ok) {
                     extractedLOs = data.learning_objectives;
@@ -480,9 +494,11 @@ Identify clinical signs of diabetic ketoacidosis"></textarea>
                     statusIndicator.className = 'status-indicator status-success';
                     statusText.textContent = `✅ Successfully extracted ${data.count} learning objectives!`;
                 } else {
-                    throw new Error(data.error);
+                    console.error('Extract error:', data);
+                    throw new Error(data.error || 'Extraction failed');
                 }
             } catch (error) {
+                console.error('Extract error:', error);
                 statusIndicator.className = 'status-indicator status-error';
                 statusText.textContent = `❌ Error: ${error.message}`;
             } finally {
@@ -520,7 +536,21 @@ def index():
     return render_template_string(HTML_TEMPLATE)
 
 
-@app.route('/api/health', methods=['GET'])
+# Add debug endpoint
+@app.route('/api/debug/sessions', methods=['GET'])
+def debug_sessions_endpoint():
+    """Debug endpoint to check session state"""
+    return jsonify({
+        'total_sessions': len(processing_sessions),
+        'session_ids': list(processing_sessions.keys()),
+        'sessions': {k: {
+            'filename': v.get('filename', 'unknown'),
+            'file_type': v.get('file_type', 'unknown'),
+            'has_los': 'learning_objectives' in v
+        } for k, v in processing_sessions.items()}
+    })
+
+
 def health_check():
     """Basic health check endpoint"""
     return jsonify({
@@ -552,9 +582,11 @@ def upload_file():
         session_id = str(uuid.uuid4())
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{session_id}_{filename}")
+
+        # Save file
         file.save(file_path)
 
-        # Store file info in session
+        # Store file info in global session
         processing_sessions[session_id] = {
             'file_path': file_path,
             'filename': filename,
@@ -562,15 +594,20 @@ def upload_file():
             'upload_time': pd.Timestamp.now().isoformat()
         }
 
+        # Debug logging
+        logger.info(f"File uploaded: {filename}, Session ID: {session_id}")
+        logger.info(f"Total sessions: {len(processing_sessions)}")
+
         return jsonify({
             'session_id': session_id,
             'filename': filename,
-            'message': 'File uploaded successfully'
+            'message': 'File uploaded successfully',
+            'debug_sessions_count': len(processing_sessions)
         })
 
     except Exception as e:
         logger.error(f"File upload failed: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Upload failed: {str(e)}'}), 500
 
 
 @app.route('/api/process/extract-los', methods=['POST'])
@@ -587,29 +624,50 @@ def extract_learning_objectives():
         if 'session_id' in data:
             # Process uploaded file
             session_id = data['session_id']
+            logger.info(f"Looking for session: {session_id}")
+            logger.info(f"Available sessions: {list(processing_sessions.keys())}")
+
             if session_id not in processing_sessions:
-                return jsonify({'error': 'Invalid session ID'}), 400
+                return jsonify({
+                    'error': f'Invalid session ID: {session_id}',
+                    'available_sessions': list(processing_sessions.keys()),
+                    'debug': 'Session not found in memory'
+                }), 400
 
             session = processing_sessions[session_id]
             file_path = session['file_path']
             file_type = session['file_type']
 
+            logger.info(f"Processing file: {file_path}, type: {file_type}")
+
+            # Check if file exists
+            if not os.path.exists(file_path):
+                return jsonify({'error': f'File not found at path: {file_path}'}), 400
+
             if file_type == 'csv':
                 # Process CSV file
-                df = pd.read_csv(file_path)
-                col = None
-                for candidate in ["Objective", "objective", "LO", "lo", "Objectives", "objectives"]:
-                    if candidate in df.columns:
-                        col = candidate
-                        break
+                try:
+                    df = pd.read_csv(file_path)
+                    logger.info(f"CSV columns: {list(df.columns)}")
 
-                if not col:
-                    return jsonify({
-                        'error': 'CSV must contain a column named "Objective", "LO", or "Objectives"',
-                        'available_columns': list(df.columns)
-                    }), 400
+                    col = None
+                    for candidate in ["Objective", "objective", "LO", "lo", "Objectives", "objectives"]:
+                        if candidate in df.columns:
+                            col = candidate
+                            break
 
-                los = [str(x).strip() for x in df[col].dropna().tolist() if str(x).strip()]
+                    if not col:
+                        return jsonify({
+                            'error': 'CSV must contain a column named "Objective", "LO", or "Objectives"',
+                            'available_columns': list(df.columns)
+                        }), 400
+
+                    los = [str(x).strip() for x in df[col].dropna().tolist() if str(x).strip()]
+                    logger.info(f"Extracted {len(los)} objectives from CSV")
+
+                except Exception as csv_error:
+                    logger.error(f"CSV processing error: {csv_error}")
+                    return jsonify({'error': f'CSV processing failed: {str(csv_error)}'}), 500
 
             elif file_type == 'pdf':
                 return jsonify({'error': 'PDF processing not available in demo version'}), 500
@@ -618,6 +676,7 @@ def extract_learning_objectives():
             # Process manual text input
             text_input = data['text'].strip()
             los = [line.strip() for line in text_input.split('\n') if line.strip()]
+            logger.info(f"Extracted {len(los)} objectives from text input")
 
         else:
             return jsonify({'error': 'No valid input method provided'}), 400
@@ -626,17 +685,19 @@ def extract_learning_objectives():
             return jsonify({'error': 'No learning objectives could be extracted'}), 400
 
         # Store LOs in session for later processing
-        if 'session_id' in data:
+        if 'session_id' in data and data['session_id'] in processing_sessions:
             processing_sessions[data['session_id']]['learning_objectives'] = los
+            logger.info(f"Stored {len(los)} LOs in session {data['session_id']}")
 
         return jsonify({
             'learning_objectives': los,
-            'count': len(los)
+            'count': len(los),
+            'debug': f'Successfully processed {len(los)} objectives'
         })
 
     except Exception as e:
         logger.error(f"LO extraction failed: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Processing failed: {str(e)}'}), 500
 
 
 # ==================== ERROR HANDLERS ====================
