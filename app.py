@@ -1,52 +1,73 @@
-<script>
-let extractedLOs = [];
-let sessionId = null;
-let matchingResults = null;
-let selectedMatches = [];
+< script >
+let
+extractedLOs = [];
+let
+sessionId = null;
+let
+matchingResults = null;
+let
+selectedMatches = [];
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function()
+{
     toggleInputMethod();
 checkConnection();
 });
 
-async function checkConnection() {
+async function
+checkConnection()
+{
 try {
 const response = await fetch('/api/health');
 const data = await response.json();
 const statusEl = document.getElementById('connectionStatus');
 const textEl = document.getElementById('connectionText');
 
-if (response.ok && data.status === 'healthy') {
+if (response.ok & & data.status == = 'healthy') {
 statusEl.className = 'connection-status connected';
-textEl.textContent = `✅ Backend connected! PDF: ${data.features?.pdf_processing ? 'Yes' : 'No'}, AI: ${data.features?.embeddings_available ? 'Yes' : 'No'}`;
+textEl.textContent = `✅ Backend connected! PDF: $
+    {data.features?.pdf_processing ? 'Yes': 'No'}, AI: ${data.features?.embeddings_available ? 'Yes': 'No'}`;
 } else {
     statusEl.className = 'connection-status disconnected';
 textEl.textContent = '❌ Backend connection failed';
 }
-} catch (error) {
-    const statusEl = document.getElementById('connectionStatus');
-const textEl = document.getElementById('connectionText');
+} catch(error)
+{
+    const
+statusEl = document.getElementById('connectionStatus');
+const
+textEl = document.getElementById('connectionText');
 statusEl.className = 'connection-status disconnected';
 textEl.textContent = '❌ Cannot connect to backend server';
 console.error('Connection error:', error);
 }
 }
 
-function toggleInputMethod() {
-const method = document.getElementById('inputMethod').value;
-document.getElementById('csvInput').classList.toggle('hidden', method !== 'csv');
-document.getElementById('pdfInput').classList.toggle('hidden', method !== 'pdf');
-document.getElementById('textInput').classList.toggle('hidden', method !== 'text');
+function
+toggleInputMethod()
+{
+const
+method = document.getElementById('inputMethod').value;
+document.getElementById('csvInput').classList.toggle('hidden', method != = 'csv');
+document.getElementById('pdfInput').classList.toggle('hidden', method != = 'pdf');
+document.getElementById('textInput').classList.toggle('hidden', method != = 'text');
 }
 
-async function handleFileSelect(event, type) {
-const file = event.target.files[0];
+async function
+handleFileSelect(event, type)
+{
+const
+file = event.target.files[0];
 if (!file) return;
 
-const infoElement = document.getElementById(type + 'FileInfo');
-infoElement.innerHTML = `🔄 Uploading: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+const
+infoElement = document.getElementById(type + 'FileInfo');
+infoElement.innerHTML = `🔄 Uploading: ${file.name}(${(file.size / 1024 / 1024).toFixed(2)}
+MB)`;
 
-const formData = new FormData();
+const
+formData = new
+FormData();
 formData.append('file', file);
 
 try {
@@ -55,27 +76,43 @@ method: 'POST',
 body: formData
 });
 
-const data = await response.json();
+const
+data = await response.json();
 console.log('Upload response:', data);
 
-if (response.ok) {
+if (response.ok)
+{
     sessionId = data.session_id;
-infoElement.innerHTML = `✅ Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) - Uploaded successfully`;
+infoElement.innerHTML = `✅ Selected: ${file.name}(${(file.size / 1024 / 1024).toFixed(2)}
+MB) - Uploaded
+successfully
+`;
 console.log('Session ID stored:', sessionId);
 } else {
-    throw new Error(data.error || 'Upload failed');
+    throw
+new
+Error(data.error | | 'Upload failed');
 }
-} catch (error) {
+} catch(error)
+{
     console.error('Upload error:', error);
-infoElement.innerHTML = `❌ Upload failed: ${error.message}`;
+infoElement.innerHTML = `❌ Upload
+failed: ${error.message}
+`;
 }
 }
 
-async function extractObjectives() {
-const method = document.getElementById('inputMethod').value;
-const extractBtn = document.getElementById('extractBtn');
-const statusIndicator = document.getElementById('statusIndicator');
-const statusText = document.getElementById('statusText');
+async function
+extractObjectives()
+{
+const
+method = document.getElementById('inputMethod').value;
+const
+extractBtn = document.getElementById('extractBtn');
+const
+statusIndicator = document.getElementById('statusIndicator');
+const
+statusText = document.getElementById('statusText');
 
 extractBtn.disabled = true;
 extractBtn.textContent = '🔄 Extracting...';
@@ -86,13 +123,13 @@ statusText.textContent = 'Processing learning objectives...';
 try {
 let requestData = {};
 
-if (method === 'text') {
+if (method == = 'text') {
 const textInput = document.getElementById('manualObjectives').value.trim();
 if (!textInput) {
 throw new Error('Please enter some learning objectives');
 }
 requestData.text = textInput;
-} else if (method === 'csv' || method === 'pdf') {
+} else if (method == = 'csv' | | method == = 'pdf') {
 if (!sessionId) {
 throw new Error('Please upload a file first');
 }
@@ -104,44 +141,61 @@ console.log('Extract request:', requestData);
 
 const response = await fetch('/api/process/extract-los', {
 method: 'POST',
-headers: { 'Content-Type': 'application/json' },
+headers: {'Content-Type': 'application/json'},
 body: JSON.stringify(requestData)
 });
 
-const data = await response.json();
+const
+data = await response.json();
 console.log('Extract response:', data);
 
-if (response.ok) {
+if (response.ok)
+{
     extractedLOs = data.learning_objectives;
 displayLOsPreview();
 statusIndicator.className = 'status-indicator status-success';
-statusText.textContent = `✅ Successfully extracted ${data.count} learning objectives!`;
+statusText.textContent = `✅ Successfully
+extracted ${data.count}
+learning
+objectives!`;
 
-// Show step 2
+// Show
+step
+2
 document.getElementById('step2').style.display = 'block';
-document.getElementById('step2').scrollIntoView({ behavior: 'smooth' });
+document.getElementById('step2').scrollIntoView({behavior: 'smooth'});
 } else {
     console.error('Extract error:', data);
-throw new Error(data.error || 'Extraction failed');
+throw
+new
+Error(data.error | | 'Extraction failed');
 }
-} catch (error) {
+} catch(error)
+{
     console.error('Extract error:', error);
 statusIndicator.className = 'status-indicator status-error';
-statusText.textContent = `❌ Error: ${error.message}`;
+statusText.textContent = `❌ Error: ${error.message}
+`;
 } finally {
     extractBtn.disabled = false;
 extractBtn.textContent = '📖 Extract Learning Objectives';
 }
 }
 
-function displayLOsPreview() {
-const previewEl = document.getElementById('losPreview');
-const listEl = document.getElementById('losPreviewList');
-const countEl = document.getElementById('losCount');
+function
+displayLOsPreview()
+{
+const
+previewEl = document.getElementById('losPreview');
+const
+listEl = document.getElementById('losPreviewList');
+const
+countEl = document.getElementById('losCount');
 
 listEl.innerHTML = '';
-extractedLOs.forEach((lo, index) => {
-    const li = document.createElement('li');
+extractedLOs.forEach((lo, index) = > {
+    const
+li = document.createElement('li');
 li.textContent = lo;
 li.style.marginBottom = '5px';
 listEl.appendChild(li);
@@ -151,18 +205,25 @@ countEl.textContent = extractedLOs.length;
 previewEl.classList.remove('hidden');
 }
 
-async function startMatching() {
+async function
+startMatching()
+{
 if (extractedLOs.length === 0) {
 alert('Please extract learning objectives first.');
 return;
 }
 
-const config = gatherConfiguration();
-if (!config) return;
+const
+config = gatherConfiguration();
+if (!config)
+return;
 
-const matchBtn = document.getElementById('matchBtn');
-const statusIndicator = document.getElementById('statusIndicator');
-const statusText = document.getElementById('statusText');
+const
+matchBtn = document.getElementById('matchBtn');
+const
+statusIndicator = document.getElementById('statusIndicator');
+const
+statusText = document.getElementById('statusText');
 
 matchBtn.disabled = true;
 matchBtn.textContent = '🔄 Matching...';
@@ -171,20 +232,24 @@ statusIndicator.className = 'status-indicator';
 
 try {
 statusText.textContent = '🔍 Loading candidate cards...';
-await new Promise(resolve => setTimeout(resolve, 500));
+await new Promise(resolve = > setTimeout(resolve, 500));
 
 statusText.textContent = '🤖 Running AI matching algorithm...';
 
 const response = await fetch('/api/process/match-cards', {
 method: 'POST',
-headers: { 'Content-Type': 'application/json' },
+headers: {'Content-Type': 'application/json'},
 body: JSON.stringify(config)
 });
 
-const data = await response.json();
+const
+data = await response.json();
 
-if (!response.ok) {
-    throw new Error(data.error);
+if (!response.ok)
+{
+    throw
+new
+Error(data.error);
 }
 
 matchingResults = data;
@@ -194,37 +259,46 @@ statusIndicator.className = 'status-indicator status-success';
 statusText.textContent = '✅ Card matching complete! Review results below.';
 
 document.getElementById('step3').style.display = 'block';
-document.getElementById('step3').scrollIntoView({ behavior: 'smooth' });
+document.getElementById('step3').scrollIntoView({behavior: 'smooth'});
 
-} catch (error) {
+} catch(error)
+{
     statusIndicator.className = 'status-indicator status-error';
-statusText.textContent = `❌ Error: ${error.message}`;
+statusText.textContent = `❌ Error: ${error.message}
+`;
 } finally {
     matchBtn.disabled = false;
 matchBtn.textContent = '🚀 Start Card Matching';
 }
 }
 
-function gatherConfiguration() {
-const targetDeck = document.getElementById('targetDeck').value.trim();
+function
+gatherConfiguration()
+{
+const
+targetDeck = document.getElementById('targetDeck').value.trim();
 if (!targetDeck) {
 alert('Please enter a target deck name.');
 return null;
 }
 
-const sourceDecks = [];
-if (document.getElementById('ankingDeck').checked) {
+const
+sourceDecks = [];
+if (document.getElementById('ankingDeck').checked)
+{
 sourceDecks.push('AnKing Step Deck');
 }
 if (document.getElementById('usuhs').checked) {
 sourceDecks.push('USUHS v2.2');
 }
 
-const customDecks = document.getElementById('customDecks').value
-                    .split(',')
-                    .map(d => d.trim())
-.filter(d => d);
-sourceDecks.push(...customDecks);
+const
+customDecks = document.getElementById('customDecks').value
+              .split(',')
+              .map(d= > d.trim())
+.filter(d= > d);
+sourceDecks.push(...
+customDecks);
 
 if (sourceDecks.length === 0) {
 alert('Please select at least one source deck.');
@@ -235,24 +309,32 @@ return {
     learning_objectives: extractedLOs,
     target_deck: targetDeck,
     source_decks: sourceDecks,
-    custom_tag: document.getElementById('customTag').value.trim() || null,
+    custom_tag: document.getElementById('customTag').value.trim() | | null,
     matching_mode: document.getElementById('matchingMode').value,
-    auto_threshold: parseFloat(document.getElementById('autoThreshold').value) || null,
+    auto_threshold: parseFloat(document.getElementById('autoThreshold').value) | | null,
     multi_select: document.getElementById('multiSelect').checked,
     max_per_lo: 3,
     alpha: 0.6
 };
 }
 
-function displayResults() {
+function
+displayResults()
+{
 displaySummaryStats();
 displayMatchCards();
 
-// Initialize selections from auto-selected matches
+// Initialize
+selections
+from auto
+
+-selected
+matches
 selectedMatches = [];
-matchingResults.results.forEach(result => {
-if (result.auto_selected && result.auto_selected.length > 0) {
-    result.auto_selected.forEach(match => {
+matchingResults.results.forEach(result= > {
+if (result.auto_selected & & result.auto_selected.length > 0)
+{
+    result.auto_selected.forEach(match= > {
         selectedMatches.push({
             learning_objective: result.learning_objective,
             note_id: match.note_id,
@@ -265,56 +347,90 @@ if (result.auto_selected && result.auto_selected.length > 0) {
 updateSelectionUI();
 }
 
-function displaySummaryStats() {
-const stats = matchingResults.stats;
-const results = matchingResults.results;
+function
+displaySummaryStats()
+{
+const
+stats = matchingResults.stats;
+const
+results = matchingResults.results;
 
-const totalMatches = results.reduce((sum, r) => sum + r.matches.length, 0);
-const autoSelected = results.reduce((sum, r) => sum + (r.auto_selected ? r.auto_selected.length : 0), 0);
-const objectivesWithMatches = results.filter(r => r.matches.length > 0).length;
+const
+totalMatches = results.reduce((sum, r) = > sum + r.matches.length, 0);
+const
+autoSelected = results.reduce((sum, r) = > sum + (r.auto_selected ? r.auto_selected.length: 0), 0);
+const
+objectivesWithMatches = results.filter(r= > r.matches.length > 0).length;
 
 document.getElementById('summaryStats').innerHTML = `
-<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center;">
-<div style="font-size: 2rem; font-weight: bold; color: #667eea;">${stats.total_objectives}</div>
-<div style="color: #666; margin-top: 5px;">Learning Objectives</div>
-</div>
-<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center;">
-<div style="font-size: 2rem; font-weight: bold; color: #667eea;">${totalMatches}</div>
-<div style="color: #666; margin-top: 5px;">Total Matches Found</div>
-</div>
-<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center;">
-<div style="font-size: 2rem; font-weight: bold; color: #667eea;">${objectivesWithMatches}</div>
-<div style="color: #666; margin-top: 5px;">Objectives with Matches</div>
-</div>
-<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center;">
-<div style="font-size: 2rem; font-weight: bold; color: #667eea;">${selectedMatches.length}</div>
-<div style="color: #666; margin-top: 5px;">Currently Selected</div>
-</div>
+< div
+style = "background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center;" >
+< div
+style = "font-size: 2rem; font-weight: bold; color: #667eea;" >${stats.total_objectives} < / div >
+< div
+style = "color: #666; margin-top: 5px;" > Learning
+Objectives < / div >
+< / div >
+< div
+style = "background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center;" >
+< div
+style = "font-size: 2rem; font-weight: bold; color: #667eea;" >${totalMatches} < / div >
+< div
+style = "color: #666; margin-top: 5px;" > Total
+Matches
+Found < / div >
+< / div >
+< div
+style = "background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center;" >
+< div
+style = "font-size: 2rem; font-weight: bold; color: #667eea;" >${objectivesWithMatches} < / div >
+< div
+style = "color: #666; margin-top: 5px;" > Objectives
+with Matches </ div >
+< / div >
+< div
+style = "background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center;" >
+< div
+style = "font-size: 2rem; font-weight: bold; color: #667eea;" >${selectedMatches.length} < / div >
+< div
+style = "color: #666; margin-top: 5px;" > Currently
+Selected < / div >
+< / div >
 `;
 }
 
-function displayMatchCards() {
-const container = document.getElementById('resultsContainer');
+function
+displayMatchCards()
+{
+const
+container = document.getElementById('resultsContainer');
 container.innerHTML = '';
 
-matchingResults.results.forEach((result, resultIndex) => {
-    const matchCard = document.createElement('div');
+matchingResults.results.forEach((result, resultIndex) = > {
+    const
+matchCard = document.createElement('div');
 matchCard.style.cssText = 'background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 10px; padding: 20px; margin: 15px 0; transition: all 0.3s ease;';
 
 matchCard.innerHTML = `
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                 <div style="font-weight: 600; color: #333; flex: 1; margin-right: 15px;">${result.learning_objective}</div>
-                                                                                                                                        </div>
-                                                                                                                                          <div id="candidates-${resultIndex}"></div>
-                                                                                                                                                                                `;
+                      < div
+style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;" >
+        < div
+style = "font-weight: 600; color: #333; flex: 1; margin-right: 15px;" >${result.learning_objective} < / div >
+                                                                                                        < / div >
+                                                                                                            < div
+id = "candidates-${resultIndex}" > < / div >
+                                       `;
 
-const candidatesContainer = matchCard.querySelector(`#candidates-${resultIndex}`);
+const
+candidatesContainer = matchCard.querySelector(`  # candidates-${resultIndex}`);
 
-                                                    if (result.matches.length === 0) {
+                                              if (result.matches.length === 0)
+{
     candidatesContainer.innerHTML = '<div style="margin-top: 10px; font-size: 0.9rem; color: #666;">❌ No matches found for this objective</div>';
 } else {
-    result.matches.forEach((match, matchIndex) => {
-    const candidateCard = createCandidateCard(match, resultIndex, matchIndex, result.learning_objective);
+    result.matches.forEach((match, matchIndex) = > {
+    const
+candidateCard = createCandidateCard(match, resultIndex, matchIndex, result.learning_objective);
 candidatesContainer.appendChild(candidateCard);
 });
 }
@@ -323,8 +439,11 @@ container.appendChild(matchCard);
 });
 }
 
-function createCandidateCard(match, resultIndex, matchIndex, lo) {
-    const card = document.createElement('div');
+function
+createCandidateCard(match, resultIndex, matchIndex, lo)
+{
+    const
+card = document.createElement('div');
 card.className = 'candidate-card';
 card.dataset.resultIndex = resultIndex;
 card.dataset.matchIndex = matchIndex;
@@ -332,59 +451,85 @@ card.dataset.noteId = match.note_id;
 card.dataset.lo = lo;
 
 card.style.cssText = `
-background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin: 10px 0;
-cursor: pointer; transition: all 0.3s ease;
+background: white;
+border: 1
+px
+solid  # e9ecef; border-radius: 8px; padding: 15px; margin: 10px 0;
+cursor: pointer;
+transition: all
+0.3
+s
+ease;
 `;
 
 card.innerHTML = `
-                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div style="flex: 1;">
-                                       <div style="display: flex; gap: 10px;">
-                                                  <div style="font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: #e9ecef;">
-                                                             Combined: ${Math.round(match.combined_score * 100)}%
-                                                                        </div>
-                                                                          <div style="font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: #e9ecef;">
-                                                                                     Fuzzy: ${Math.round(match.fuzzy_score * 100)}%
-                                                                                             </div>
+                 < div
+style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;" >
+        < div
+style = "flex: 1;" >
+        < div
+style = "display: flex; gap: 10px;" >
+        < div
+style = "font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: #e9ecef;" >
+        Combined: ${Math.round(match.combined_score * 100)} %
+                   < / div >
+                       < div
+style = "font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: #e9ecef;" >
+        Fuzzy: ${Math.round(match.fuzzy_score * 100)} %
+                < / div >
 ${match.embedding_score > 0 ? `
-                              <div style="font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: #e9ecef;">
-                                         AI: ${Math.round(match.embedding_score * 100)}%
-                                              </div>
-                                                ` : ''}
-</div>
-  </div>
-    <input type="checkbox" style="transform: scale(1.3);" onchange="toggleCardSelection(this)">
-                                                                   </div>
-                                                                     <div style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin: 10px 0;">
-                                                                                <div style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">
-                                                                                           <strong>Model:</strong> ${match.model_name} |
-                                                                                                                    <strong>Note ID:</strong> ${match.note_id}
-                                                                                                                                               </div>
-                                                                                                                                                 <div style="margin-bottom: 8px;">
-                                                                                                                                                            <strong>Preview:</strong> ${match.preview_text}
-                                                                                                                                                                                       </div>
-${match.tags && match.tags.length > 0 ? `
-                                        <div style="font-size: 0.85rem; color: #666;">
-                                                   <strong>Tags:</strong> ${match.tags.join(', ')}
-                                                                           </div>
-                                                                             ` : ''}
-</div>
-  `;
+                              < div
+style = "font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: #e9ecef;" >
+        AI: ${Math.round(match.embedding_score * 100)} %
+             < / div >
+                 `: ''}
+< / div >
+    < / div >
+        < input
+type = "checkbox"
+style = "transform: scale(1.3);"
+onchange = "toggleCardSelection(this)" >
+           < / div >
+               < div
+style = "background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin: 10px 0;" >
+        < div
+style = "font-size: 0.9rem; color: #666; margin-bottom: 8px;" >
+        < strong > Model: < / strong > ${match.model_name} |
+                                        < strong > Note
+ID: < / strong > ${match.note_id}
+                  < / div >
+                      < div
+style = "margin-bottom: 8px;" >
+        < strong > Preview: < / strong > ${match.preview_text}
+                                          < / div >
+${match.tags & & match.tags.length > 0 ? `
+                                         < div
+style = "font-size: 0.85rem; color: #666;" >
+        < strong > Tags: < / strong > ${match.tags.join(', ')}
+                                       < / div >
+                                           `: ''}
+< / div >
+    `;
 
-card.addEventListener('click', function(e) {
-if (e.target.type !== 'checkbox') {
-    const checkbox = card.querySelector('input[type="checkbox"]');
+card.addEventListener('click', function(e)
+{
+if (e.target.type !== 'checkbox')
+{
+    const
+checkbox = card.querySelector('input[type="checkbox"]');
 checkbox.checked = !checkbox.checked;
 toggleCardSelection(checkbox);
 }
 });
 
-card.addEventListener('mouseenter', function() {
+card.addEventListener('mouseenter', function()
+{
     card.style.borderColor = '#667eea';
 card.style.boxShadow = '0 2px 10px rgba(102, 126, 234, 0.1)';
 });
 
-card.addEventListener('mouseleave', function() {
+card.addEventListener('mouseleave', function()
+{
 if (!card.classList.contains('selected')) {
     card.style.borderColor = '#e9ecef';
 card.style.boxShadow = 'none';
@@ -394,10 +539,15 @@ card.style.boxShadow = 'none';
 return card;
 }
 
-function toggleCardSelection(checkbox) {
-const card = checkbox.closest('.candidate-card');
-const noteId = parseInt(card.dataset.noteId);
-const lo = card.dataset.lo;
+function
+toggleCardSelection(checkbox)
+{
+const
+card = checkbox.closest('.candidate-card');
+const
+noteId = parseInt(card.dataset.noteId);
+const
+lo = card.dataset.lo;
 
 if (checkbox.checked) {
 card.classList.add('selected');
@@ -405,7 +555,7 @@ card.style.borderColor = '#28a745';
 card.style.backgroundColor = '#f8fff9';
 
 // Add to selected matches if not already present
-if (!selectedMatches.some(m => m.note_id === noteId && m.learning_objective === lo)) {
+if (!selectedMatches.some(m = > m.note_id == = noteId & & m.learning_objective == = lo)) {
 const resultIndex = parseInt(card.dataset.resultIndex);
 const matchIndex = parseInt(card.dataset.matchIndex);
 const match = matchingResults.results[resultIndex].matches[matchIndex];
@@ -413,7 +563,8 @@ const match = matchingResults.results[resultIndex].matches[matchIndex];
 selectedMatches.push({
 learning_objective: lo,
 note_id: noteId,
-...match
+...
+match
 });
 }
 } else {
@@ -421,27 +572,40 @@ note_id: noteId,
 card.style.borderColor = '#e9ecef';
 card.style.backgroundColor = 'white';
 
-// Remove from selected matches
-selectedMatches = selectedMatches.filter(m =>
-!(m.note_id === noteId && m.learning_objective === lo)
+// Remove
+from selected matches
+
+selectedMatches = selectedMatches.filter(m= >
+!(m.note_id === noteId & & m.learning_objective == = lo)
 );
 }
 
 updateSelectionUI();
 }
 
-function updateSelectionUI() {
-// Update checkboxes to match selectedMatches
-document.querySelectorAll('.candidate-card').forEach(card => {
-    const noteId = parseInt(card.dataset.noteId);
-const lo = card.dataset.lo;
-const checkbox = card.querySelector('input[type="checkbox"]');
-const isSelected = selectedMatches.some(m =>
-                   m.note_id === noteId && m.learning_objective === lo
+function
+updateSelectionUI()
+{
+// Update
+checkboxes
+to
+match
+selectedMatches
+document.querySelectorAll('.candidate-card').forEach(card= > {
+    const
+noteId = parseInt(card.dataset.noteId);
+const
+lo = card.dataset.lo;
+const
+checkbox = card.querySelector('input[type="checkbox"]');
+const
+isSelected = selectedMatches.some(m= >
+             m.note_id == = noteId & & m.learning_objective == = lo
 );
 
 checkbox.checked = isSelected;
-if (isSelected) {
+if (isSelected)
+{
     card.classList.add('selected');
 card.style.borderColor = '#28a745';
 card.style.backgroundColor = '#f8fff9';
@@ -452,8 +616,11 @@ card.style.backgroundColor = 'white';
 }
 });
 
-// Update summary stats
-const summaryContainer = document.getElementById('summaryStats');
+// Update
+summary
+stats
+const
+summaryContainer = document.getElementById('summaryStats');
 if (summaryContainer) {
 const statCards = summaryContainer.querySelectorAll('div');
 if (statCards.length >= 4) {
@@ -462,17 +629,24 @@ statCards[3].querySelector('div').textContent = selectedMatches.length;
 }
 }
 
-function selectAll() {
+function
+selectAll()
+{
 selectedMatches = [];
 
-matchingResults.results.forEach(result => {
-if (result.matches && result.matches.length > 0) {
-                                                 // Select top match for each objective
+matchingResults.results.forEach(result= > {
+if (result.matches & & result.matches.length > 0)
+{
+// Select
+top
+match
+for each objective
 const topMatch = result.matches[0];
 selectedMatches.push({
 learning_objective: result.learning_objective,
 note_id: topMatch.note_id,
-...topMatch
+...
+topMatch
 });
 }
 });
@@ -480,85 +654,125 @@ note_id: topMatch.note_id,
 updateSelectionUI();
 }
 
-function clearSelections() {
+function
+clearSelections()
+{
 selectedMatches = [];
 updateSelectionUI();
 }
 
-async function applyChanges() {
+async function
+applyChanges()
+{
 if (selectedMatches.length === 0) {
 alert('Please select at least one card to apply changes.');
 return;
 }
 
-const dryRun = document.getElementById('dryRun').checked;
-const targetDeck = document.getElementById('targetDeck').value.trim();
-const customTag = document.getElementById('customTag').value.trim();
+const
+dryRun = document.getElementById('dryRun').checked;
+const
+targetDeck = document.getElementById('targetDeck').value.trim();
+const
+customTag = document.getElementById('customTag').value.trim();
 
-const confirmMsg = dryRun
-? `Preview: This would modify ${selectedMatches.length} cards. Continue?`
-: `This will modify ${selectedMatches.length} cards in your Anki collection. Continue?`;
+const
+confirmMsg = dryRun
+? `Preview: This
+would
+modify ${selectedMatches.length}
+cards.Continue?`
+: `This
+will
+modify ${selectedMatches.length}
+cards in your
+Anki
+collection.Continue?`;
 
 if (!confirm(confirmMsg)) return;
 
-const applyBtn = document.getElementById('applyBtn');
-const originalText = applyBtn.textContent;
+const
+applyBtn = document.getElementById('applyBtn');
+const
+originalText = applyBtn.textContent;
 applyBtn.disabled = true;
 applyBtn.textContent = '🔄 Applying changes...';
 
 try {
 const response = await fetch('/api/apply-changes', {
 method: 'POST',
-headers: { 'Content-Type': 'application/json' },
+headers: {'Content-Type': 'application/json'},
 body: JSON.stringify({
     selected_matches: selectedMatches,
     target_deck: targetDeck,
-    custom_tag: customTag || null,
+    custom_tag: customTag | | null,
     dry_run: dryRun
 })
 });
 
-const data = await response.json();
+const
+data = await response.json();
 
-if (response.ok) {
+if (response.ok)
+{
     alert(data.message);
 } else {
-    throw new Error(data.error);
+    throw
+new
+Error(data.error);
 }
-} catch (error) {
-    alert(`Failed to apply changes: ${error.message}`);
+} catch(error)
+{
+    alert(`Failed
+to
+apply
+changes: ${error.message}
+`);
 } finally {
     applyBtn.disabled = false;
 applyBtn.textContent = originalText;
 }
 }
 
-function exportResults() {
+function
+exportResults()
+{
 if (!matchingResults) {
 alert('No results to export.');
 return;
 }
 
-const exportData = {
+const
+exportData = {
 results: matchingResults.results,
 selected_matches: selectedMatches,
 config: matchingResults.config,
-timestamp: new Date().toISOString()
+timestamp: new
+Date().toISOString()
 };
 
-const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+const
+blob = new
+Blob([JSON.stringify(exportData, null, 2)], {
     type: 'application/json'
 });
-const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
+const
+url = URL.createObjectURL(blob);
+const
+a = document.createElement('a');
 a.href = url;
-a.download = `decksurfer_results_${new Date().toISOString().slice(0,10)}.json`;
+a.download = `decksurfer_results_${new
+Date().toISOString().slice(0, 10)}.json
+`;
 a.click();
 URL.revokeObjectURL(url);
 
-alert(`Results exported successfully!`);
+alert(`Results
+exported
+successfully!`);
 }
-</script>#!/usr/bin/env python3
+< / script >
+# !/usr/bin/env python3
 # app.py - Flask backend for DeckSurfer (Final Working Version)
 import os
 import tempfile
@@ -580,8 +794,9 @@ CORS(app, origins="*")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration - Heroku-friendly
+# Configuration - Railway-friendly
 PORT = int(os.environ.get('PORT', 5000))
+RAILWAY_ENVIRONMENT = os.environ.get('RAILWAY_ENVIRONMENT_NAME', 'development')
 UPLOAD_FOLDER = os.path.join(tempfile.gettempdir(), 'decksurfer_uploads')
 SESSION_FOLDER = os.path.join(tempfile.gettempdir(), 'decksurfer_sessions')
 MAX_FILE_SIZE = int(os.environ.get('MAX_FILE_SIZE', 50 * 1024 * 1024))  # 50MB
@@ -594,6 +809,7 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 try:
     # Import fuzzy matching
     from rapidfuzz import fuzz
+
     FUZZY_AVAILABLE = True
     print("✅ Fuzzy matching available")
 except ImportError:
@@ -604,11 +820,13 @@ except ImportError:
 try:
     from sentence_transformers import SentenceTransformer
     import numpy as np
+
     EMBEDDINGS_AVAILABLE = True
     print("✅ AI embeddings available")
 except ImportError:
     EMBEDDINGS_AVAILABLE = False
     print("⚠️ AI embeddings not available")
+
 
 # Mock Anki functions for demo/remote use
 def mock_anki_invoke(action: str, **params):
@@ -633,18 +851,20 @@ def mock_anki_invoke(action: str, **params):
                 'modelName': 'Cloze' if i % 2 == 0 else 'Basic',
                 'tags': ['USUHS::Endocrine', 'AnKing::Step1'] if i % 3 == 0 else ['Medical'],
                 'fields': {
-                    'Front': f'Sample question about diabetes and insulin mechanism {i+1}',
-                    'Back': f'Answer explaining pathophysiology and clinical significance {i+1}',
-                    'Extra': f'Additional context about endocrine system {i+1}'
+                    'Front': f'Sample question about diabetes and insulin mechanism {i + 1}',
+                    'Back': f'Answer explaining pathophysiology and clinical significance {i + 1}',
+                    'Extra': f'Additional context about endocrine system {i + 1}'
                 }
             })
         return mock_notes
     return None
 
+
 # Fuzzy matching functions
 def safe_norm(s: str) -> str:
     """Normalize text for comparison"""
     return " ".join(s.lower().split())
+
 
 def fuzzy_score(lo: str, card_text: str) -> float:
     """Calculate fuzzy similarity score"""
@@ -662,6 +882,7 @@ def fuzzy_score(lo: str, card_text: str) -> float:
     c = fuzz.token_sort_ratio(lo, card_text) / 100.0
     return 0.5 * a + 0.3 * b + 0.2 * c
 
+
 def extract_note_text(note: dict) -> str:
     """Extract searchable text from note"""
     fields = note.get("fields", {})
@@ -675,8 +896,10 @@ def extract_note_text(note: dict) -> str:
     tags = " ".join(note.get("tags", []))
     return ((" ".join(pieces)) + " " + tags).strip()
 
+
 class EmbeddingIndex:
     """AI similarity search using sentence transformers"""
+
     def __init__(self):
         if not EMBEDDINGS_AVAILABLE:
             self.model = None
@@ -711,12 +934,13 @@ class EmbeddingIndex:
         try:
             q = self.model.encode([lo_text], normalize_embeddings=True)[0]
             sims = self.card_matrix @ q
-            idxs = np.argpartition(-sims, min(top_k, len(sims)-1))[:top_k]
+            idxs = np.argpartition(-sims, min(top_k, len(sims) - 1))[:top_k]
             ranked = sorted([(int(i), float(sims[i])) for i in idxs], key=lambda x: -x[1])
             return ranked
         except Exception as e:
             print(f"⚠️ Embedding query failed: {e}")
             return []
+
 
 # PDF processing functions
 def extract_text_from_pdf(pdf_path: str) -> str:
@@ -735,6 +959,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
         return "\n".join(text)
     except Exception as e:
         raise Exception(f"PDF extraction failed: {str(e)}")
+
 
 def clean_and_split_pdf_text(text: str) -> List[str]:
     """Turn raw PDF text into learning objectives"""
@@ -768,7 +993,9 @@ def clean_and_split_pdf_text(text: str) -> List[str]:
             cleaned = candidate.strip()
             # Filter for reasonable length sentences that look like learning objectives
             if (20 < len(cleaned) < 250 and
-                    any(word in cleaned.lower() for word in ['understand', 'describe', 'explain', 'identify', 'analyze', 'compare', 'define', 'discuss', 'evaluate', 'demonstrate']) and
+                    any(word in cleaned.lower() for word in
+                        ['understand', 'describe', 'explain', 'identify', 'analyze', 'compare', 'define', 'discuss',
+                         'evaluate', 'demonstrate']) and
                     cleaned not in objectives):
                 objectives.append(cleaned)
 
@@ -783,14 +1010,17 @@ def clean_and_split_pdf_text(text: str) -> List[str]:
 
     return final_objectives if final_objectives else ['No clear learning objectives found in PDF']
 
+
 # Try to import PDF processing
 try:
     import PyPDF2
+
     PDF_AVAILABLE = True
     print("✅ PDF processing available")
 except ImportError:
     PDF_AVAILABLE = False
     print("⚠️ PDF processing not available - install PyPDF2")
+
 
 # Card matching and processing functions
 def index_candidate_pool(decks: List[str], limit: Optional[int] = None, demo_mode: bool = True) -> List[dict]:
@@ -799,14 +1029,24 @@ def index_candidate_pool(decks: List[str], limit: Optional[int] = None, demo_mod
         # Generate mock data for demo
         mock_cards = []
         card_templates = [
-            {"front": "What hormone is deficient in Type 1 diabetes?", "back": "Insulin", "tags": ["USUHS::Endocrine", "AnKing::Step1"]},
-            {"front": "DKA is characterized by what three findings?", "back": "Hyperglycemia, ketosis, acidosis", "tags": ["USUHS::Emergency", "AnKing::Step1"]},
-            {"front": "Which cells produce insulin?", "back": "Beta cells of pancreatic islets", "tags": ["USUHS::Endocrine"]},
-            {"front": "What is the primary defect in Type 2 diabetes?", "back": "Insulin resistance", "tags": ["USUHS::Endocrine", "AnKing::Step1"]},
-            {"front": "What is the normal blood glucose range?", "back": "70-100 mg/dL fasting", "tags": ["USUHS::Lab Values"]},
-            {"front": "What is HbA1c and what does it measure?", "back": "Glycated hemoglobin, measures average blood glucose over 2-3 months", "tags": ["USUHS::Lab Values", "AnKing::Step1"]},
-            {"front": "What are the classic symptoms of diabetes?", "back": "Polyuria, polydipsia, polyphagia, weight loss", "tags": ["USUHS::Clinical"]},
-            {"front": "What is the mechanism of metformin?", "back": "Decreases hepatic glucose production, increases insulin sensitivity", "tags": ["USUHS::Pharmacology", "AnKing::Step1"]},
+            {"front": "What hormone is deficient in Type 1 diabetes?", "back": "Insulin",
+             "tags": ["USUHS::Endocrine", "AnKing::Step1"]},
+            {"front": "DKA is characterized by what three findings?", "back": "Hyperglycemia, ketosis, acidosis",
+             "tags": ["USUHS::Emergency", "AnKing::Step1"]},
+            {"front": "Which cells produce insulin?", "back": "Beta cells of pancreatic islets",
+             "tags": ["USUHS::Endocrine"]},
+            {"front": "What is the primary defect in Type 2 diabetes?", "back": "Insulin resistance",
+             "tags": ["USUHS::Endocrine", "AnKing::Step1"]},
+            {"front": "What is the normal blood glucose range?", "back": "70-100 mg/dL fasting",
+             "tags": ["USUHS::Lab Values"]},
+            {"front": "What is HbA1c and what does it measure?",
+             "back": "Glycated hemoglobin, measures average blood glucose over 2-3 months",
+             "tags": ["USUHS::Lab Values", "AnKing::Step1"]},
+            {"front": "What are the classic symptoms of diabetes?",
+             "back": "Polyuria, polydipsia, polyphagia, weight loss", "tags": ["USUHS::Clinical"]},
+            {"front": "What is the mechanism of metformin?",
+             "back": "Decreases hepatic glucose production, increases insulin sensitivity",
+             "tags": ["USUHS::Pharmacology", "AnKing::Step1"]},
         ]
 
         for i, template in enumerate(card_templates * 3):  # Duplicate for more examples
@@ -818,7 +1058,7 @@ def index_candidate_pool(decks: List[str], limit: Optional[int] = None, demo_mod
                 'fields': {
                     'Front': template['front'],
                     'Back': template['back'],
-                    'Extra': f"Additional clinical context for card {i+1}"
+                    'Extra': f"Additional clinical context for card {i + 1}"
                 },
                 'text': f"Front: {template['front']} Back: {template['back']} {' '.join(template['tags'])}"
             })
@@ -854,6 +1094,7 @@ def index_candidate_pool(decks: List[str], limit: Optional[int] = None, demo_mod
         except Exception as e:
             print(f"AnkiConnect failed, using demo mode: {e}")
             return index_candidate_pool(decks, limit, demo_mode=True)
+
 
 def combined_top_candidates(
         lo: str,
@@ -902,14 +1143,17 @@ def combined_top_candidates(
     top = scored[:k_final]
     return [(cards[i], combo, fz, em) for (i, combo, fz, em) in top]
 
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def save_session(session_id: str, data: dict):
     """Save session data to file"""
     session_path = os.path.join(SESSION_FOLDER, f"{session_id}.json")
     with open(session_path, 'w') as f:
         json.dump(data, f)
+
 
 def load_session(session_id: str) -> Optional[dict]:
     """Load session data from file"""
@@ -921,6 +1165,7 @@ def load_session(session_id: str) -> Optional[dict]:
         except:
             return None
     return None
+
 
 # Inline HTML template
 HTML_TEMPLATE = '''<!DOCTYPE html>
@@ -1260,6 +1505,7 @@ Identify clinical signs of diabetic ketoacidosis"></textarea>
 </body>
 </html>'''
 
+
 # ==================== ROUTES ====================
 
 @app.route('/')
@@ -1267,13 +1513,15 @@ def index():
     """Serve the main HTML interface"""
     return render_template_string(HTML_TEMPLATE)
 
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Basic health check endpoint"""
     try:
         return jsonify({
             'status': 'healthy',
-            'environment': 'demo',
+            'environment': 'production' if RAILWAY_ENVIRONMENT == 'production' else 'development',
+            'railway_environment': RAILWAY_ENVIRONMENT,
             'message': 'DeckSurfer demo backend is running!',
             'features': {
                 'text_processing': True,
@@ -1288,6 +1536,7 @@ def health_check():
             'status': 'error',
             'message': str(e)
         }), 500
+
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
@@ -1331,6 +1580,7 @@ def upload_file():
     except Exception as e:
         logger.error(f"File upload failed: {e}")
         return jsonify({'error': f'Upload failed: {str(e)}'}), 500
+
 
 @app.route('/api/process/extract-los', methods=['POST'])
 def extract_learning_objectives():
@@ -1422,6 +1672,7 @@ def extract_learning_objectives():
                 session['learning_objectives'] = los
                 save_session(data['session_id'], session)
 
+
 @app.route('/api/process/match-cards', methods=['POST'])
 def match_cards_to_objectives():
     """Main processing endpoint - match cards to learning objectives"""
@@ -1473,7 +1724,7 @@ def match_cards_to_objectives():
         results = []
 
         for i, lo in enumerate(config['learning_objectives']):
-            logger.info(f"Processing LO {i+1}/{len(config['learning_objectives'])}: {lo[:50]}...")
+            logger.info(f"Processing LO {i + 1}/{len(config['learning_objectives'])}: {lo[:50]}...")
 
             # Get top candidates
             k_final = 10 if config['multi_select'] else 3
@@ -1543,6 +1794,7 @@ def match_cards_to_objectives():
         logger.error(f"Card matching failed: {e}")
         return jsonify({'error': f'Card matching failed: {str(e)}'}), 500
 
+
 def extract_preview_text(card: dict) -> str:
     """Extract a readable preview from card fields"""
     fields = card.get('fields', {})
@@ -1566,6 +1818,7 @@ def extract_preview_text(card: dict) -> str:
             return text[:200]
 
     return "No preview available"
+
 
 @app.route('/api/apply-changes', methods=['POST'])
 def apply_changes_to_anki():
@@ -1610,20 +1863,24 @@ def apply_changes_to_anki():
         logger.error(f"Failed to apply changes: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 # ==================== ERROR HANDLERS ====================
 
 @app.errorhandler(413)
 def too_large(e):
     return jsonify({'error': 'File too large (max 50MB)'}), 413
 
+
 @app.errorhandler(500)
 def internal_error(e):
     logger.error(f"Internal server error: {e}")
     return jsonify({'error': 'Internal server error'}), 500
 
+
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({'error': 'Endpoint not found'}), 404
+
 
 # ==================== STARTUP ====================
 
