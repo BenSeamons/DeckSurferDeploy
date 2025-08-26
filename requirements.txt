@@ -1,4 +1,4 @@
-# Heroku-Compatible DeckSurfer Requirements
+# Full DeckSurfer Requirements for Railway/Render
 Flask==3.0.0
 Flask-CORS==4.0.0
 pandas>=2.2.0
@@ -7,7 +7,12 @@ rapidfuzz>=3.5.0
 PyPDF2==3.0.1
 Werkzeug>=3.0.0
 gunicorn==21.2.0
+
+# AI/ML Dependencies (for full functionality)
 sentence-transformers==2.2.2
+torch>=1.13.0,<2.1.0
+transformers>=4.21.0,<5.0.0
 numpy>=1.24.0
-torch>=1.13.0
-transformers>=4.21.0
+
+# Optional optimizations
+scikit-learn>=1.3.0
